@@ -6,10 +6,17 @@ from sklearn.multioutput import MultiOutputRegressor
 from iris_robots.transformations import add_angles, angle_diff
 import pickle
 
-DATA_PATH='/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy'
+DATA_PATHS = [
+        '/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/purple_marker_grasp_franka/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_blue_floral/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_mixed_floral/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_gray/combined_trajectories.npy'
+        ]
+trajectories = []
 
-with open(DATA_PATH, 'rb') as f:
-    trajectories = np.load(DATA_PATH, allow_pickle=True)
+for path in DATA_PATHS:
+    trajectories = np.load(path, allow_pickle=True)
 
 actions = []
 commanded_delta_pose = []        #next desired pose - current pose
