@@ -4,8 +4,9 @@ from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from iris_robots.transformations import add_angles, angle_diff
+import pickle
 
-DATA_PATH='/iris/u/jyang27/training_data/purple_marker_grasp/combined_trajectories.npy'
+DATA_PATH='/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy'
 
 with open(DATA_PATH, 'rb') as f:
     trajectories = np.load(DATA_PATH, allow_pickle=True)
@@ -64,12 +65,14 @@ x_test = x[test_indices, :]
 y_train = y[train_indices, :]
 y_test = y[test_indices, :]
 
-'''
 x_mean, x_std = np.mean(x_train, axis=0), np.std(x_train, axis=0)
 y_mean, y_std = np.mean(y_train, axis=0), np.std(y_train, axis=0)
-'''
-x_mean, x_std = np.zeros(x_train.shape[1]), np.ones(x_train.shape[1])
-y_mean, y_std = np.zeros(y_train.shape[1]), np.ones(y_train.shape[1])
+
+with open('action_normalization_mean.pkl', 'wb+') as f:
+    pickle.dump((x_mean, x_std, y_mean, y_std), f)
+
+#x_mean, x_std = np.zeros(x_train.shape[1]), np.ones(x_train.shape[1])
+#y_mean, y_std = np.zeros(y_train.shape[1]), np.ones(y_train.shape[1])
 
 import pdb; pdb.set_trace()
 x_train = (x_train - x_mean) / x_std 
@@ -90,7 +93,6 @@ print("Mean squared error: {}".format(mean_squared_error(y_test, y_pred)))
 print("Coefficient of determination: {}".format(r2_score(y_test, y_pred)))
 
 import pdb; pdb.set_trace()
-import pickle
 with open('linear_cdp_model.pkl', 'wb+') as f:
     pickle.dump(regr, f)
 

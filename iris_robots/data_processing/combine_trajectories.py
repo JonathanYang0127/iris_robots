@@ -14,13 +14,21 @@ def combine_trajectories(args):
         if 'combined' not in file:
             with open(file, 'rb') as f:
                 trajectory = np.load(f, allow_pickle=True)
-            if trajectory.item()['observations'][0]['images'] != []:
-                trajectories.append(trajectory.item())
+                trajectory = trajectory.item()
+   
+            closed_pose = False
+            for j in range(len(trajectory['actions'])):
+                if trajectory['actions'][j][6] > 0.5:
+                    closed_pose = True
+                    break
+
+            if trajectory['observations'][0]['images'] == []:
+                print("No image in  {}".format(file))
             else:
-                print("Failed to load {}".format(file))
+                trajectories.append(trajectory)
 
     save_path = os.path.join(args.save_dir, 'combined_trajectories.npy')
-    print("Saving combined trajectories to {}".format(save_path))
+    print("Saving {} combined trajectories to {}".format(len(trajectories), save_path))
     np.save(os.path.abspath(save_path), trajectories)
 
 if __name__ == '__main__':
