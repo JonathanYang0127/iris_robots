@@ -14,17 +14,17 @@ from iris_robots.camera_utils.multi_camera_wrapper import MultiCameraWrapper
 from iris_robots.server.robot_interface import RobotInterface
 
 class RobotEnv(gym.Env):
-    
+
     def __init__(self, ip_address=None, robot_model='franka', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
             camera_types=['cv2'], blocking=True):
-        
+
         # Initialize Gym Environment
         super().__init__()
 
         # Physics
-        self.use_desired_pose = True
-        self.max_lin_vel = 1.0
-        self.max_rot_vel = 1.0
+        self.use_desired_pose = False
+        self.max_lin_vel = 1.5
+        self.max_rot_vel = 8.0
         self.DoF = 6
         self.hz = control_hz
         self.blocking=blocking
@@ -53,7 +53,7 @@ class RobotEnv(gym.Env):
         # Create Cameras
         self._use_local_cameras = use_local_cameras
         self._use_robot_cameras = use_robot_cameras
-        
+
         if self._use_local_cameras:
             self._camera_reader = MultiCameraWrapper(camera_types=camera_types)
 
@@ -70,7 +70,7 @@ class RobotEnv(gym.Env):
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
         desired_pos = self._curr_pos + lin_vel
         desired_angle = add_angles(rot_vel, self._curr_angle)
-        
+
         self._update_robot(desired_pos, desired_angle, gripper)
 
         comp_time = time.time() - start_time
@@ -84,7 +84,8 @@ class RobotEnv(gym.Env):
         desired_pos = self._curr_pos + action[:3]
         desired_angle = add_angles(action[3:6], self._curr_angle)
 
-        self._update_robot(desired_pos, desired_angle, action[6])
+        gripper_action = 0#action[6]
+        self._update_robot(desired_pos, desired_angle, gripper_action)
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
         time.sleep(sleep_left)
@@ -116,19 +117,22 @@ class RobotEnv(gym.Env):
 
     def _limit_velocity(self, lin_vel, rot_vel):
         """Scales down the linear and angular magnitudes of the action"""
+
         lin_vel_norm = np.linalg.norm(lin_vel)
         rot_vel_norm = np.linalg.norm(rot_vel)
-        if lin_vel_norm > self.max_lin_vel:
-            lin_vel = lin_vel * self.max_lin_vel / lin_vel_norm
-        if rot_vel_norm > self.max_rot_vel:
-            rot_vel = rot_vel * self.max_rot_vel / rot_vel_norm
-        lin_vel, rot_vel = lin_vel / self.hz, rot_vel / self.hz
+
+        if lin_vel_norm > 1: lin_vel = lin_vel / lin_vel_norm
+        if rot_vel_norm > 1: rot_vel = rot_vel / rot_vel_norm
+
+        lin_vel = lin_vel * self.max_lin_vel / self.hz
+        rot_vel = rot_vel * self.max_rot_vel / self.hz
+
         return lin_vel, rot_vel
 
     def _update_robot(self, pos, angle, gripper):
         feasible_pos, feasible_angle = self._robot.update_pose(pos, angle)
         self._robot.update_gripper(gripper)
-        self._desired_pose = {'position': feasible_pos, 
+        self._desired_pose = {'position': feasible_pos,
                               'angle': feasible_angle,
                               'gripper': gripper}
 

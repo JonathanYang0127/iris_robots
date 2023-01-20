@@ -6,15 +6,13 @@ from iris_robots.transformations import add_angles, angle_diff
 import pickle
 
 DATA_PATHS = [
-        #'/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/purple_marker_grasp_franka/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_purple_marker_grasp_blue_floral/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_purple_marker_grasp_mixed_floral/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_purple_marker_grasp_gray/combined_trajectories.npy',
-        #'proprioceptive_data_collection/proprioceptive_data_new/combined_trajectories.npy',
-        '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy',
-        'proprioceptive_data_collection/proprioceptive_data_tc_nodesired_new/combined_trajectories.npy'
-        ]
+        '/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/purple_marker_grasp_franka/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_blue_floral/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_mixed_floral/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_gray/combined_trajectories.npy',
+        'proprioceptive_data_new/combined_trajectories.npy'
+]
 trajectories = []
 
 for path in DATA_PATHS:
@@ -22,85 +20,58 @@ for path in DATA_PATHS:
 
 actions = []
 commanded_delta_pose = []        #next desired pose - current pose
-commanded_delta_pose_angle = []
-commanded_delta_pose_xyz = []
 achieved_delta_pose = []         #next achieved pose - current pose
-delta_joints = []                      #delta joints
 
-def pose_diff(target, source, sin_angle=False):
+
+def pose_diff(target, source):
     diff = np.zeros(len(target))
     diff[:3] = target[:3] - source[:3]
     diff[3:6] = angle_diff(target[3:6], source[3:6])
-    diff[3:6] = diff[3:6]
     diff[6] = target[6] - source[6]
     return diff
 
 
 def limit_velocity(action):
     """Scales down the linear and angular magnitudes of the action"""
-    max_lin_vel = 1.5
-    max_rot_vel = 8.0
-    hz = 20
-
+    action = np.array(action)
     lin_vel = action[:3]
     rot_vel = action[3:6]
-    
     lin_vel_norm = np.linalg.norm(lin_vel)
     rot_vel_norm = np.linalg.norm(rot_vel)
-
-    if lin_vel_norm > 1: lin_vel = lin_vel / lin_vel_norm
-    if rot_vel_norm > 1: rot_vel = rot_vel / rot_vel_norm
-
-    lin_vel = lin_vel * max_lin_vel / hz
-    rot_vel = rot_vel * max_rot_vel / hz
-
+    if lin_vel_norm > 1:
+        lin_vel = lin_vel / lin_vel_norm
+    if rot_vel_norm > 1:
+        rot_vel = rot_vel / rot_vel_norm
     return np.concatenate((lin_vel, rot_vel))
+
+ 
 
 for path in trajectories:
     for t in range(0, len(path['observations']) - 1):
-        action = limit_velocity(path['actions'][t]).tolist()
+        action = limit_velocity(path['actions'][t])
         current_pose = path['observations'][t]['current_pose']
-        desired_pose = path['observations'][t]['desired_pose']
-        joints = path['observations'][t]['joint_positions']
         next_achieved_pose = path['observations'][t + 1]['current_pose']
         next_desired_pose = path['observations'][t + 1]['desired_pose']
-        next_joints = path['observations'][t + 1]['joint_positions']
 
+        actions.append(action)
         adp = pose_diff(next_achieved_pose,  current_pose).tolist()[:-1]
-        delta_joint = (next_joints - joints).tolist()
-        #adp = next_desired_pose[:-1]  
+        #adp = next_desired_pose[:-1]        
 
-        ##import pdb; pdb.set_trace()
-        history = []
         for i in range(0, 2):
             index = 0 if t-i < 0 else t-i
-            history += path['observations'][index]['current_pose'].tolist()[:-1]
-            #history += path['observations'][index]['desired_pose'].tolist()[:-1]
-            history += path['observations'][index]['joint_positions'].tolist()
+            adp += path['observations'][index]['current_pose'].tolist()[:-1]
+            adp += path['observations'][index]['desired_pose'].tolist()[:-1]
         #adp += path['observations'][t + 1]['current_pose'].tolist()
         
         #adp += (path['observations'][t]['current_pose']).tolist()
         #adp += (path['observations'][t - 1]['current_pose']).tolist() 
-        cdp = pose_diff(next_desired_pose, current_pose)#.tolist()[:-1]
-        cdp_angle = np.concatenate((np.sin(cdp[3:6]), np.cos(cdp[3:6])))
-        adp += history
+        achieved_delta_pose.append(adp)
         
-        actions.append(action)
-        achieved_delta_pose.append(adp) 
-        commanded_delta_pose.append(cdp)
-        commanded_delta_pose_xyz.append(cdp[:3])
-        commanded_delta_pose_angle.append(cdp_angle)
-        delta_joints.append(delta_joint)
-
+        commanded_delta_pose.append(pose_diff(next_desired_pose, current_pose).tolist()[:-1])
 
 commanded_delta_pose = np.array(commanded_delta_pose)
-commanded_delta_pose_xyz = np.array(commanded_delta_pose_xyz)
-commanded_delta_pose_angle = np.array(commanded_delta_pose_angle)
 achieved_delta_pose = np.array(achieved_delta_pose)
 actions = np.array(actions)
-delta_joints = np.array(delta_joints)
-
-import pdb; pdb.set_trace()
 
 indices = np.arange(len(commanded_delta_pose)) 
 indices = np.random.permutation(len(commanded_delta_pose))
@@ -110,13 +81,11 @@ train_indices = indices[:num_train_indices]
 test_indices = indices[num_train_indices:]
 
 x_name = 'adp'
-y_name = 'cdp_xyz'
+y_name = 'cdp'
 x = achieved_delta_pose
-y = commanded_delta_pose_xyz
-normalize = False
+y = commanded_delta_pose
 
-import pdb; pdb.set_trace()
-
+print(x, y)
 x_train = x[train_indices, :]
 x_test = x[test_indices, :]
 y_train = y[train_indices, :]
@@ -125,13 +94,17 @@ y_test = y[test_indices, :]
 x_mean, x_std = np.mean(x_train, axis=0), np.std(x_train, axis=0)
 y_mean, y_std = np.mean(y_train, axis=0), np.std(y_train, axis=0)
 
-with open('action_normalization_mean_{}_{}.pkl'.format(x_name, y_name), 'wb+') as f:
+
+with open('action_normalization_mean.pkl', 'wb+') as f:
     pickle.dump((x_mean, x_std, y_mean, y_std), f)
 
-if not normalize:
-    x_mean, x_std = np.zeros(x_train.shape[1]), np.ones(x_train.shape[1])
-    y_mean, y_std = np.zeros(y_train.shape[1]), np.ones(y_train.shape[1])
 
+normalize_name = 'unnormalized'
+x_mean, x_std = np.zeros(x_train.shape[1]), np.ones(x_train.shape[1])
+y_mean, y_std = np.zeros(y_train.shape[1]), np.ones(y_train.shape[1])
+
+
+import pdb; pdb.set_trace()
 x_train = (x_train - x_mean) / x_std 
 x_test = (x_test - x_mean) / x_std
 y_train = (y_train - y_mean) / y_std
@@ -150,19 +123,16 @@ print("Mean squared error: {}".format(mean_squared_error(y_test, y_pred)))
 print("Coefficient of determination: {}".format(r2_score(y_test, y_pred)))
 
 
-#import pdb; pdb.set_trace()
-#with open('linear_cdp_model.pkl', 'wb+') as f: 
-#    pickle.dump(regr, f)
-
+with open('linear_cdp_model.pkl', 'wb+') as f: 
+    pickle.dump(regr, f)
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-torch.set_printoptions(precision=8)
-x_train_torch = torch.from_numpy(x_train).cuda().float()
-x_test_torch = torch.from_numpy(x_test).cuda().float()
-y_train_torch = torch.from_numpy(y_train).cuda().float()
-y_test_torch = torch.from_numpy(y_test).cuda().float()
+x_train_torch = torch.Tensor(x_train).cuda()
+x_test_torch = torch.Tensor(x_test).cuda()
+y_train_torch = torch.Tensor(y_train).cuda()
+y_test_torch = torch.Tensor(y_test).cuda()
 print(x_train.shape)
 
 
@@ -198,13 +168,86 @@ model = nn.Sequential(
         nn.ReLU(),
         nn.Linear(512, 256),
         nn.ReLU(),
-        nn.Linear(256, y_train.shape[1])
+        nn.Linear(256, 6)
         ).cuda()
 
 
+
+class DeltaPoseToCommand:
+    def __init__(self, init_obs, normalize=False, model_type='linear'):
+        self._previous_obs = init_obs
+        self._obs = init_obs
+        self.model_type = model_type
+
+        from sklearn import linear_model
+        from sklearn.metrics import mean_squared_error
+        import pickle
+
+        if self.model_type == 'linear':
+            self.model_path = '/iris/u/jyang27/dev/iris_robots/widowx_scripts/linear_cdp_model.pkl'
+            with open(self.model_path, 'rb') as f:
+                self.model = pickle.load(f)
+        elif self.model_type == 'nonlinear':
+            self.model_path = '/iris/u/jyang27/dev/iris_robots/widowx_scripts/nonlinear_adp_cdp_model_'
+            if normalize:
+                self.model_path += 'normalized.pt'
+            else:
+                self.model_path += 'unnormalized.pt'
+            with open(self.model_path, 'rb') as f:
+                self.model = torch.load(f)
+
+        self.normalization_path = '/iris/u/jyang27/dev/iris_robots/widowx_scripts/action_normalization_mean.pkl'
+        with open(self.normalization_path, 'rb') as f:
+            self.x_mean, self.x_std, self.y_mean, self.y_std = pickle.load(f)
+
+        if not normalize:
+            self.x_mean, self.x_std = np.zeros(self.x_mean.shape[0]), np.ones(self.x_std.shape[0])
+            self.y_mean, self.y_std = np.zeros(self.y_mean.shape[0]), np.ones(self.y_std.shape[0])
+
+
+    def postprocess_obs_action(self, obs, action):
+        self._previous_obs = self._obs
+        self._obs = obs
+        adp = action.tolist()[:-1]
+        adp += self._obs['current_pose'].tolist()[:-1]
+        adp += self._obs['desired_pose'].tolist()[:-1]
+        adp += self._previous_obs['current_pose'].tolist()[:-1]
+        adp += self._previous_obs['desired_pose'].tolist()[:-1]
+        adp = np.array(adp).reshape(1, -1)
+
+        adp = (adp - self.x_mean) / self.x_std
+        if self.model_type == 'linear':
+            return self.model.predict(adp)[0]*self.y_std + self.y_mean
+        elif self.model_type == 'nonlinear':
+            adp = torch.Tensor(adp).cuda()
+            return self.model(adp).detach().cpu().numpy()[0]*self.y_std + self.y_mean
+                                                                                        
+
+def collect_new_data():
+    env = RobotEnv(robot_model='wx250s', control_hz=20, use_local_cameras=True, camera_types='cv2', blocking=False)
+    X_data = []
+    Y_data = []
+
+    relabeller = DeltaPoseToCommand(obs, normalize=False, model_type='nonlinear')
+
+    for i in range(20):
+        index = np.random.randint(len(trajectories))
+        obs = env.reset()
+        for j in range(len(traj[index]['actions']) - 1):
+            obs = env.get_observation()
+            action = relabeller.postprocess_obs_action(obs, adp)
+            action = np.concatenate((action, [0]))
+            env.step_direct(action)
+            new_obs = env.get_observation()
+            X_data.append(pose_diff(new_obs['current_pose'], obs['current_pose']))
+            Y_data.append(action)
+
+
 #model = InverseDynamicsModel(x_train.shape[1], 7).cuda()
+#import pdb; pdb.set_trace()
+#model.load_state_dict(torch.load('new2/checkpoints_cdp_normalized_bigger/output_1100000.pt'))
 import pdb; pdb.set_trace()
-#model.load_state_dict(torch.load('new2/checkpoints_cdp_normalized_bigger/output_100000.pt'))
+model = torch.load('nonlinear_adp_cdp_model_unnormalized.pt')
 print(model(x_test_torch[0]).detach().cpu().numpy() * y_std + y_mean)
 print(y_test_torch[0].detach().cpu().numpy() * y_std + y_mean)
 
@@ -226,4 +269,4 @@ for i in range(100 * (int(1e4))):
         loss = criterion(outputs, y_test_torch)
         print("Validation Loss: ", loss.item())
         torch.save(model.state_dict(), 'new2/checkpoints_cdp_normalized_bigger/output_{}.pt'.format(i))
-        torch.save(model, 'nonlinear_{}_{}_model_{}.pt'.format(x_name, y_name, 'normalized' if normalize else 'unnormalized'))
+        torch.save(model, 'nonlinear_{}_{}_model_{}.pt'.format(x_name, y_name, normalize_name))

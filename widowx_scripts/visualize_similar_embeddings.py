@@ -5,11 +5,10 @@ import argparse
 
 import rlkit.torch.pytorch_util as ptu
 
-ROBOT_PATH_ONE = '/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy'
-ROBOT_PATH_TWO = '/iris/u/jyang27/training_data/purple_marker_grasp_franka/combined_trajectories.npy'
-MODEL_PATH = '/iris/u/jyang27/logs/22-12-01-BC-wx250/22-12-01-BC-wx250_2022_12_01_17_39_43_id000--s7/itr_580.pt'
-
-
+ROBOT_PATH_ONE = '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_mixed_floral/combined_trajectories.npy'
+ROBOT_PATH_TWO = '/iris/u/jyang27/training_data/wx250_purple_marker_grasp_blue_floral/combined_trajectories.npy'
+#MODEL_PATH = '/iris/u/jyang27/logs/22-12-01-BC-wx250/22-12-01-BC-wx250_2022_12_01_17_39_43_id000--s7/itr_580.pt'
+MODEL_PATH = '/iris/u/jyang27/logs/23-01-07-BC-wx250/23-01-07-BC-wx250_2023_01_07_14_49_07_id000--s0/itr_800.pt'
 
 with open(ROBOT_PATH_ONE, 'rb') as f:
     traj1 = np.load(f, allow_pickle=True)
@@ -21,7 +20,7 @@ with open(MODEL_PATH, 'rb') as f:
     params = torch.load(f)
     policy = params['evaluation/policy']
 
-policy.output_conv_channels = True
+policy.output_conv_channels = False
 policy.color_jitter = False
 policy.feature_norm = False
 
@@ -81,20 +80,19 @@ from rlkit.torch.sac.policies import GaussianCNNPolicy, GaussianIMPALACNNPolicy,
 output1 = super(GaussianCNNPolicy, policy).forward(ptu.from_numpy(obs1).cuda())
 output2 = super(GaussianCNNPolicy, policy).forward(ptu.from_numpy(obs2).cuda())
 
-
-image_index = 0
-image1 = obs1[image_index][:3 * 64 * 64].reshape(3, 64, 64).transpose(1, 2, 0)
-v1 = output1[image_index]
-closest = 1e9
-for v2 in output2:
-    if torch.linalg.norm(v1 - v2) < closest:
-        closest = torch.linalg.norm(v1 - v2)
-        closest_image = obs2[image_index][:3 * 64 * 64].reshape(3, 64, 64).transpose(1, 2, 0)
 import matplotlib.pyplot as plt
-plt.imshow(image1)
-plt.savefig('out1.png')
-plt.imshow(closest_image)
-plt.savefig('out2.png')
+for image_index in range(20):
+    image1 = obs1[image_index][:3 * 64 * 64].reshape(3, 64, 64).transpose(1, 2, 0)
+    v1 = output1[image_index]
+    closest = 1e9
+    for v2 in output2:
+        if torch.linalg.norm(v1 - v2) < closest:
+            closest = torch.linalg.norm(v1 - v2)
+            closest_image = obs2[image_index][:3 * 64 * 64].reshape(3, 64, 64).transpose(1, 2, 0)
+    plt.imshow(image1)
+    plt.savefig('images/out{}_original.png'.format(image_index))
+    plt.imshow(closest_image)
+    plt.savefig('images/out{}_nearest.png'.format(image_index))
 
 output1 = output1.detach().cpu().numpy().reshape(NUM_OBS, -1)
 output2 = output2.detach().cpu().numpy().reshape(NUM_OBS, -1)
