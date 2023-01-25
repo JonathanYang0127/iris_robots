@@ -12,8 +12,16 @@ DATA_PATHS = [
         #'/iris/u/jyang27/training_data/wx250_purple_marker_grasp_mixed_floral/combined_trajectories.npy',
         #'/iris/u/jyang27/training_data/wx250_purple_marker_grasp_gray/combined_trajectories.npy',
         #'proprioceptive_data_collection/proprioceptive_data_new/combined_trajectories.npy',
-        '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy',
-        'proprioceptive_data_collection/proprioceptive_data_tc_nodesired_new/combined_trajectories.npy'
+        #'/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy',
+        #'proprioceptive_data_collection/proprioceptive_data_tc_nodesired_new/combined_trajectories.npy'
+        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_nodesired_control2/combined_trajectories.npy',
+        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_cloth_nodesired_control2/combined_trajectories.npy',
+        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_gray_nodesired_control2/combined_trajectories.npy',
+        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_tan_nodesired_control2/combined_trajectories.npy'
+        '/iris/u/jyang27/training_data/franka_black_marker_grasp_blue_nodesired/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/franka_black_marker_grasp_brown_nodesired/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/franka_black_marker_grasp_gray_nodesired/combined_trajectories.npy',
+        '/iris/u/jyang27/training_data/franka_black_marker_grasp_pink_polka_plate_nodesired/combined_trajectories.npy'
         ]
 trajectories = []
 

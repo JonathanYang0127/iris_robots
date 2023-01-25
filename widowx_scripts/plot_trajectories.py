@@ -8,7 +8,9 @@ from iris_robots.transformations import add_angles, angle_diff
 
 #ROBOT_PATH = '/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy'
 #ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/widowx_scripts/proprioceptive_data_collection/proprioceptive_data_tc_nodesired/combined_trajectories.npy'
-ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy'
+ROBOT_PATH = '/iris/u/jyang27/training_data/franka_black_marker_grasp_blue_nodesired/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_nodesired_control2/combined_trajectories.npy'
 
 with open(ROBOT_PATH, 'rb') as f:
     trajectories = np.load(f, allow_pickle=True)
@@ -58,7 +60,7 @@ def limit_velocity(action):
 
     return np.concatenate((lin_vel, rot_vel))
 
-path = trajectories[0]
+path = trajectories[20]
 for t in range(0, len(path['observations']) // 2):
     action = limit_velocity(path['actions'][t]).tolist()
     current_pose = path['observations'][t]['current_pose'].tolist()
