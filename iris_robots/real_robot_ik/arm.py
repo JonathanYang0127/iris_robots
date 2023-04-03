@@ -80,3 +80,13 @@ class WidowX200Arm(RobotArm):
         self._model_file = os.path.join(dir_path, 'wx200', 'wx200.urdf')
         self._mjcf_root = mjcf.from_path(self._model_file)
         self._create_body()
+
+
+class FetchArm(RobotArm):
+    def _build(self):
+        self._name = 'fetch'
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self._model_file = os.path.join(dir_path, 'fetch', 'fetch_sim', 'assets', 'asset.xml')
+        self._mjcf_root = mjcf.from_path(self._model_file)
+        self._create_body()
+

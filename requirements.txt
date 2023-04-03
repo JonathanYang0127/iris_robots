@@ -1,4 +1,5 @@
 numpy==1.23.3
+scipy
 dm-robotics-moma==0.4.0
 matplotlib
 pyyaml
