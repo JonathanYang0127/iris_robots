@@ -1,9 +1,15 @@
 import numpy as np
 from dm_control import mjcf
 from dm_robotics.moma.effectors import (arm_effector,
+<<<<<<< HEAD
                                         cartesian_6d_velocity_effector)
 from scipy.spatial.transform import Rotation as R
 from iris_robots.real_robot_ik.arm import FrankaArm, WidowX200Arm, WidowX250Arm
+=======
+                                                                                cartesian_6d_velocity_effector)
+from scipy.spatial.transform import Rotation as R
+from iris_robots.real_robot_ik.arm import FrankaArm, WidowX200Arm, FetchArm
+>>>>>>> 9f77c2acf1be83297d07d88790c49bb9abb731ba
 import torch
 
 def quat_diff(target, source, return_euler=False):
@@ -12,7 +18,6 @@ def quat_diff(target, source, return_euler=False):
     return result.as_quat()
 
 class RobotIKSolver:
-
     def __init__(self, robot, control_hz=20, arm_name = 'franka'):
         self._robot = robot
 
@@ -22,12 +27,14 @@ class RobotIKSolver:
             self._arm = WidowX200Arm()
         elif arm_name == 'wx250':
             self._arm = WidowX250Arm()
-            
+        elif arm_name == 'fetch':
+            self._arm = FetchArm()
+                
         self._physics = mjcf.Physics.from_mjcf_model(self._arm.mjcf_model)
         self._effector = arm_effector.ArmEffector(arm=self._arm,
-                                    action_range_override=None,
-                                    robot_name=self._arm.name)
-        
+            action_range_override=None,
+            robot_name=self._arm.name)
+                
         self._effector_model = cartesian_6d_velocity_effector.ModelParams(
             self._arm.wrist_site, self._arm.joints)
 
@@ -46,9 +53,8 @@ class RobotIKSolver:
             max_cartesian_velocity_control_iterations=300,
             max_nullspace_control_iterations=300)
 
-
         self._cart_effector_6d = cartesian_6d_velocity_effector.Cartesian6dVelocityEffector(
-            self._arm.name, self._effector, self._effector_model, self._effector_control)
+                        self._arm.name, self._effector, self._effector_model, self._effector_control)
 
         self._cart_effector_6d.after_compile(self._arm.mjcf_model, self._physics)
 
