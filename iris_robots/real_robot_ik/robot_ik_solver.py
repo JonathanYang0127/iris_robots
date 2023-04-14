@@ -4,7 +4,6 @@ from dm_robotics.moma.effectors import (arm_effector,
                                         cartesian_6d_velocity_effector)
 from scipy.spatial.transform import Rotation as R
 from iris_robots.real_robot_ik.arm import FrankaArm, WidowX200Arm, WidowX250Arm
-                                                                                cartesian_6d_velocity_effector)
 from scipy.spatial.transform import Rotation as R
 from iris_robots.real_robot_ik.arm import FrankaArm, WidowX200Arm, FetchArm
 import torch
