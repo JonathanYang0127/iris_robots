@@ -96,7 +96,7 @@ class WidowXRobot:
     def __init__(self, control_hz=20, robot_model='wx250s', blocking=True):
         self.robot_model = robot_model
         self.dxl = InterbotixRobotXSCore(robot_model, None, True)
-        self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 2.0, 0.3)
+        self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 1.0, 0.01)
 
         self._joint_lock = Lock()
         self._angles, self._velocities = {}, {}

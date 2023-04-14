@@ -119,6 +119,8 @@ class WidowXRobot:
         self.blocking = blocking
 
         #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
+        from iris_robots.real_robot_ik.robot_ik_solver import RobotIKSolver
+        self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
 
     def _joint_callback(self, msg):
         with self._joint_lock:
@@ -140,13 +142,17 @@ class WidowXRobot:
         new_quat = Quaternion(euler_to_quat(angle))
         new_pose[:3, :3] = new_quat.rotation_matrix
 
+        '''
         if not self.blocking:
             solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
                                                                      execute=True)
         else:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
                                                                 moving_time=duration, accel_time=duration * 0.45)
-
+        '''
+        ee_pos, ee_quat = self.get_ee_pose()
+        solution, success = self._ik_solver.compute(pos, new_quat, joint_positions=self.get_joint_positions, joint_velocities=self.get_joint_velocities(), ee_pos=ee_pos, ee_quat=ee_quat)
+                                                                
         return pos, angle
 
     def update_joints(self, joints, duration=1.5):

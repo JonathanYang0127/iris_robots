@@ -2,4 +2,5 @@ iris_robots/widowx/build
 iris_robots/widowx/devel
 iris_robots/widowx/src/*
 *.pyc
+*.pt
 

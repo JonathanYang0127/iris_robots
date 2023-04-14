@@ -14,4 +14,8 @@ ROBOT_PARAMS = dict(
         'num_joints': 6,
         'reset_joints': np.array([0, -0.3, 0.3, 0, np.pi / 2, 0])
     }),
+    'fetch': dict({
+        'num_joints': 7,
+        'reset_joints': np.array([0, -1.0, 0, 1.5, 0,  1.2, 0])
+    )}
 })

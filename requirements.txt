@@ -1,5 +1,6 @@
 numpy==1.23.3
 dm-robotics-moma==0.5.0
+scipy
 matplotlib
 pyyaml
 rospkg

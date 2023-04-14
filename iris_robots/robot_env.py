@@ -23,8 +23,11 @@ class RobotEnv(gym.Env):
 
         # Physics
         self.use_desired_pose = False
+<<<<<<< HEAD
         self.max_lin_vel = 2.0 #1.0
         self.max_rot_vel = 2.0
+=======
+>>>>>>> 0d515c16c0800a7b02ae6941c59a4f1ba27cedc9
         self.DoF = 6
         self.hz = control_hz
         self.blocking=blocking
@@ -35,18 +38,30 @@ class RobotEnv(gym.Env):
         if ip_address is None:
             if robot_model == 'franka':
                 from iris_robots.franka.robot import FrankaRobot
+<<<<<<< HEAD
                 self._robot = FrankaRobot(control_hz=self.hz, blocking=blocking)
+=======
+                self._robot = FrankaRobot(control_hz=self.hz)
+                self.max_lin_vel = 1.0
+                self.max_rot_vel = 2.0
+>>>>>>> 0d515c16c0800a7b02ae6941c59a4f1ba27cedc9
             elif robot_model == 'wx200':
                 from iris_robots.widowx.robot import WidowX200Robot
                 self._robot = WidowX200Robot(control_hz=self.hz)
+                self.max_lin_vel = 1.5
+                self.max_rot_vel = 6.0
             elif robot_model == 'wx250s':
                 from iris_robots.widowx.robot import WidowX250SRobot
                 self._robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
+                self.max_lin_vel = 1.5
+                self.max_rot_vel = 6.0
             else:
                 raise NotImplementedError
 
         else:
             self._robot = RobotInterface(ip_address=ip_address)
+            self.max_lin_vel = 1.0
+            self.max_rot_vel = 2.0
 
         # Reset joints
         self.reset_joints = ROBOT_PARAMS[robot_model]['reset_joints']
@@ -60,6 +75,9 @@ class RobotEnv(gym.Env):
                     reverse=self.reverse_image)
         
         self.reset()
+
+        if self.num_cameras == 0:
+            print("Warning: No cameras found!") 
 
     def step(self, action):
         start_time = time.time()
@@ -86,7 +104,8 @@ class RobotEnv(gym.Env):
         desired_pos = self._curr_pos + action[:3]
         desired_angle = add_angles(action[3:6], self._curr_angle)
 
-        gripper_action = 0#action[6]
+        gripper_action = action[6]
+        #gripper_action += 1
         self._update_robot(desired_pos, desired_angle, gripper_action)
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)

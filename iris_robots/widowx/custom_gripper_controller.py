@@ -13,7 +13,7 @@ from interbotix_xs_msgs.msg import JointSingleCommand
 
 
 class GripperController:
-    def __init__(self, robot_name, create_node=False, upper_limit=0.035, lower_limit=0.010, des_pos_max=1, des_pos_min=0):
+    def __init__(self, robot_name, create_node=False, upper_limit=0.034, lower_limit=0.010, des_pos_max=1, des_pos_min=0):
         if create_node:
             rospy.init_node('gripper_controller')
         assert des_pos_max >= des_pos_min, "gripper des_pos_max has to be >= des_pos_min"
