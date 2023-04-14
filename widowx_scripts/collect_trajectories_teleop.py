@@ -19,7 +19,7 @@ controller = VRPolicy(pos_action_gain=[20, 20, 20],
 
 # Make the data collector
 log_dir = os.path.join(os.path.dirname(iris_robots.__file__), 'training_data')
-log_dir = os.path.join(log_dir, "purple_marker_grasp_new")
+log_dir = os.path.join(log_dir, "wx250_purple_marker_grasp_blue_nodesired_3dof")
 data_collector = DataCollector(env=env, controller=controller, policy=policy, log_dir=log_dir)
 
 # Collect and save trajectories

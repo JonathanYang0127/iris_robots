@@ -6,39 +6,44 @@ import time
 
 class MultiCameraWrapper:
 
-	def __init__(self, camera_types=['realsense', 'zed'], specific_cameras=None, use_threads=True):
-		self._all_cameras = []
+    def __init__(self, camera_types=['realsense', 'zed'], specific_cameras=None, use_threads=True,
+                reverse=False):
+        self._all_cameras = []
+        if specific_cameras is not None:
+            self._all_cameras.extend(specific_cameras)
 
-		if specific_cameras is not None:
-			self._all_cameras.extend(specific_cameras)
+        if 'realsense' in camera_types:
+            realsense_cameras = gather_realsense_cameras()
+            self._all_cameras.extend(realsense_cameras)
 
-		if 'realsense' in camera_types:
-			realsense_cameras = gather_realsense_cameras()
-			self._all_cameras.extend(realsense_cameras)
+        if 'zed' in camera_types:
+            zed_cameras = gather_zed_cameras()
+            self._all_cameras.extend(zed_cameras)
 
-		if 'zed' in camera_types:
-			zed_cameras = gather_zed_cameras()
-			self._all_cameras.extend(zed_cameras)
+        if 'cv2' in camera_types:
+            cv2_cameras = gather_cv2_cameras()
+            self._all_cameras.extend(cv2_cameras)
 
-		if 'cv2' in camera_types:
-			cv2_cameras = gather_cv2_cameras()
-			self._all_cameras.extend(cv2_cameras)
+        if use_threads:
+            for i in range(len(self._all_cameras)):
+                self._all_cameras[i] = CameraThread(self._all_cameras[i])
+            time.sleep(1)
 
-		if use_threads:
-			for i in range(len(self._all_cameras)):
-				self._all_cameras[i] = CameraThread(self._all_cameras[i])
-			time.sleep(1)
+        self.reverse = reverse
 
-	def read_cameras(self):
-		all_frames = []
-		for camera in self._all_cameras:
-			curr_feed = camera.read_camera()
-			# while curr_feed is None:
-			# 	curr_feed = camera.read_camera()
-			if curr_feed is not None:
-				all_frames.extend(curr_feed)
-		return all_frames
+    def read_cameras(self):
+        all_frames = []
+        for camera in self._all_cameras:
+            curr_feed = camera.read_camera()
+            if self.reverse:
+                print(curr_feed.shape)
+                curr_feed = curr_feed[:, ::-1, :]
+            # while curr_feed is None:
+            #   curr_feed = camera.read_camera()
+            if curr_feed is not None:
+                all_frames.extend(curr_feed)
+        return all_frames
 
-	def disable_cameras(self):
-		for camera in self._all_cameras:
-			camera.disable_camera()
+    def disable_cameras(self):
+        for camera in self._all_cameras:
+            camera.disable_camera()

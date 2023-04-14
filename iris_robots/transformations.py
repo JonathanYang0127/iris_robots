@@ -30,6 +30,13 @@ def add_angles(delta, source, degrees=False):
     new_rot = delta_rot * source_rot
     return new_rot.as_euler('xyz', degrees=degrees)
 
+def pose_diff(target, source):
+    diff = np.zeros(len(target))
+    diff[:3] = target[:3] - source[:3]
+    diff[3:6] = angle_diff(target[3:6], source[3:6])
+    diff[6] = target[6] - source[6]
+    return diff
+
 def rmat_to_euler(rot_mat, degrees=False):
     euler = R.from_matrix(rot_mat).as_euler('xyz', degrees=degrees)
     return euler

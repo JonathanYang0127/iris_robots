@@ -14,7 +14,7 @@ import os
 
 
 class FrankaRobot:
-    def __init__(self, control_hz=20):
+    def __init__(self, control_hz=20, blocking=False):
         #self.launch_robot()
         from polymetis import RobotInterface, GripperInterface
 
@@ -23,6 +23,7 @@ class FrankaRobot:
         self._ik_solver = RobotIKSolver(self._robot, control_hz=control_hz)
         self._max_gripper_width = self._gripper.metadata.max_width 
         self._gripper_min = 0
+        self.blocking = blocking
 
     def launch_robot(self):
         self._robot_process = run_terminal_command('bash ' + os.getcwd() + '/franka/launch_robot.sh')
@@ -46,7 +47,9 @@ class FrankaRobot:
         if not self._robot.is_running_policy():
             self._robot.start_cartesian_impedance()
         self._robot.update_desired_joint_positions(desired_qpos)
-
+        
+        if self.blocking:
+            time.sleep(1.0)
         return feasible_pos, feasible_angle
     
     def update_joints(self, joints):

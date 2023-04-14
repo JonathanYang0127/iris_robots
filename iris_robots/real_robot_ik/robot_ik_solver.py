@@ -20,7 +20,7 @@ class RobotIKSolver:
 			self._arm = FrankaArm()
 		elif arm_name == 'wx200':
 			self._arm = WidowX200Arm()
-	        
+	       
 		self._physics = mjcf.Physics.from_mjcf_model(self._arm.mjcf_model)
 		self._effector = arm_effector.ArmEffector(arm=self._arm,
 									action_range_override=None,

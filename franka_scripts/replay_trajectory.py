@@ -18,16 +18,18 @@ ROBOT_PATH_TWO = '/iris/u/jyang27/training_data/purple_marker_grasp_franka/combi
 with open(ROBOT_PATH_TWO, 'rb') as f:
     traj = np.load(f, allow_pickle=True)
 
-
-
 #env = RobotEnv(robot_model='wx250s', control_hz=20, use_local_cameras=True, camera_types='cv2', blocking=False)
 env = RobotEnv('172.16.0.21', use_robot_cameras=True)
 env.reset()
 
-index = 0
-for j in range(len(traj[0]['actions'])):
+index = 40
+for j in range(len(traj[index]['actions'])):
     obs = env.get_observation()
-    action = traj[index]['actions'][j]
-    action[3:6] *= -1
+    #action = traj[index]['observations'][j + 1]['current_pose'] - traj[index]['observations'][j]['current_pose']
+    #action = traj[index]['actions'][j]
+    #action[3:6] *= -1
+    #action /= 2.5
+    #action *= 20
+    action = np.clip(action, -1, 1)
     env.step(action)
 
