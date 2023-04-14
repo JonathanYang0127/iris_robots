@@ -23,11 +23,6 @@ class RobotEnv(gym.Env):
 
         # Physics
         self.use_desired_pose = False
-<<<<<<< HEAD
-        self.max_lin_vel = 2.0 #1.0
-        self.max_rot_vel = 2.0
-=======
->>>>>>> 0d515c16c0800a7b02ae6941c59a4f1ba27cedc9
         self.DoF = 6
         self.hz = control_hz
         self.blocking=blocking
@@ -38,13 +33,10 @@ class RobotEnv(gym.Env):
         if ip_address is None:
             if robot_model == 'franka':
                 from iris_robots.franka.robot import FrankaRobot
-<<<<<<< HEAD
                 self._robot = FrankaRobot(control_hz=self.hz, blocking=blocking)
-=======
                 self._robot = FrankaRobot(control_hz=self.hz)
                 self.max_lin_vel = 1.0
                 self.max_rot_vel = 2.0
->>>>>>> 0d515c16c0800a7b02ae6941c59a4f1ba27cedc9
             elif robot_model == 'wx200':
                 from iris_robots.widowx.robot import WidowX200Robot
                 self._robot = WidowX200Robot(control_hz=self.hz)
