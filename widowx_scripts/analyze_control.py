@@ -3,6 +3,7 @@ from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.multioutput import MultiOutputRegressor
 from iris_robots.transformations import add_angles, angle_diff
+from pathlib import Path
 import pickle
 
 DATA_PATHS = [
@@ -14,18 +15,22 @@ DATA_PATHS = [
         #'proprioceptive_data_collection/proprioceptive_data_new/combined_trajectories.npy',
         #'/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy',
         #'proprioceptive_data_collection/proprioceptive_data_tc_nodesired_new/combined_trajectories.npy'
-        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_nodesired_control2/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_cloth_nodesired_control2/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_gray_nodesired_control2/combined_trajectories.npy',
-        #'/iris/u/jyang27/training_data/wx250_black_marker_grasp_tan_nodesired_control2/combined_trajectories.npy'
-        '/iris/u/jyang27/training_data/franka_black_marker_grasp_blue_nodesired/combined_trajectories.npy',
-        '/iris/u/jyang27/training_data/franka_black_marker_grasp_brown_nodesired/combined_trajectories.npy',
-        '/iris/u/jyang27/training_data/franka_black_marker_grasp_gray_nodesired/combined_trajectories.npy',
-        '/iris/u/jyang27/training_data/franka_black_marker_grasp_pink_polka_plate_nodesired/combined_trajectories.npy'
-        ]
+        #'/iris/u/jyang27/training_data/franka_nodesired/',
+        '/iris/u/jyang27/training_data/wx250_nodesired_control3']
 trajectories = []
 
-for path in DATA_PATHS:
+data_paths = set()
+for data_path in DATA_PATHS:
+    if '.pkl' in data_path or '.npy' in data_path:
+        data_paths.add(data_path)
+    else:
+        path = Path(data_path)
+        data_paths.update(list(path.rglob('combined_trajectories.npy')))
+data_paths = [str(b) for b in data_paths]
+
+robot_type = 'wx250s' if 'wx250' in data_paths[0] else 'franka'
+
+for path in data_paths:
     trajectories.extend(np.load(path, allow_pickle=True))
 
 actions = []
@@ -44,14 +49,25 @@ def pose_diff(target, source, sin_angle=False):
     return diff
 
 
-def limit_velocity(action):
+def limit_velocity(action, robot_type):
     """Scales down the linear and angular magnitudes of the action"""
-    max_lin_vel = 1.5
-    max_rot_vel = 8.0
+
+    if robot_type == 'wx250s':
+        max_lin_vel = 1.5
+        max_rot_vel = 6.0
+    elif robot_type == 'franka':
+        max_lin_vel = 1.0
+        max_rot_vel = 2.0
     hz = 20
 
     lin_vel = action[:3]
     rot_vel = action[3:6]
+    gripper = action[6]
+
+    if robot_type == 'wx250s':
+        gripper = (gripper - 0.010) / 0.025
+    elif robot_type == 'franka':
+        gripper += 1.0
     
     lin_vel_norm = np.linalg.norm(lin_vel)
     rot_vel_norm = np.linalg.norm(rot_vel)
@@ -62,11 +78,11 @@ def limit_velocity(action):
     lin_vel = lin_vel * max_lin_vel / hz
     rot_vel = rot_vel * max_rot_vel / hz
 
-    return np.concatenate((lin_vel, rot_vel))
+    return lin_vel, rot_vel, gripper
 
 for path in trajectories:
     for t in range(0, len(path['observations']) - 1):
-        action = limit_velocity(path['actions'][t]).tolist()
+        action = path['actions'][t]
         current_pose = path['observations'][t]['current_pose']
         desired_pose = path['observations'][t]['desired_pose']
         joints = path['observations'][t]['joint_positions']
@@ -89,7 +105,11 @@ for path in trajectories:
         
         #adp += (path['observations'][t]['current_pose']).tolist()
         #adp += (path['observations'][t - 1]['current_pose']).tolist() 
-        cdp = pose_diff(next_desired_pose, current_pose)#.tolist()[:-1]
+        
+        lin_vel, rot_vel, gripper = limit_velocity(action, robot_type)
+        cdp = np.concatenate((lin_vel, rot_vel, [gripper]))
+
+        #cdp = pose_diff(next_desired_pose, current_pose)#.tolist()[:-1]
         cdp_angle = np.concatenate((np.sin(cdp[3:6]), np.cos(cdp[3:6])))
         adp += history
         
@@ -234,4 +254,4 @@ for i in range(100 * (int(1e4))):
         loss = criterion(outputs, y_test_torch)
         print("Validation Loss: ", loss.item())
         torch.save(model.state_dict(), 'new2/checkpoints_cdp_normalized_bigger/output_{}.pt'.format(i))
-        torch.save(model, 'nonlinear_{}_{}_model_{}.pt'.format(x_name, y_name, 'normalized' if normalize else 'unnormalized'))
+        torch.save(model, 'nonlinear_{}_{}_{}_model_{}.pt'.format(robot_type, x_name, y_name, 'normalized' if normalize else 'unnormalized'))

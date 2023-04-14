@@ -65,6 +65,9 @@ class RobotEnv(gym.Env):
 
         self.reset()
 
+        if self.num_cameras == 0:
+            print("Warning: No cameras found!") 
+
     def step(self, action):
         start_time = time.time()
 
@@ -91,7 +94,7 @@ class RobotEnv(gym.Env):
         desired_angle = add_angles(action[3:6], self._curr_angle)
 
         gripper_action = action[6]
-        gripper_action += 1
+        #gripper_action += 1
         self._update_robot(desired_pos, desired_angle, gripper_action)
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
