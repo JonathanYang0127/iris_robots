@@ -16,3 +16,4 @@ env = RobotEnv(robot_model='franka', control_hz=20, use_local_cameras=True, came
 
 import pdb; pdb.set_trace()
 
+

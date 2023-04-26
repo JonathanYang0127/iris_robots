@@ -39,7 +39,8 @@ class MultiCameraWrapper:
             #   curr_feed = camera.read_camera()
             if curr_feed is not None:
                 if self.reverse:
-                    curr_feed = curr_feed
+                    for i in range(len(curr_feed)):
+                        curr_feed[i]['array'] = curr_feed[i]['array'][::-1, ::-1, :]
                 all_frames.extend(curr_feed)
         return all_frames
 
