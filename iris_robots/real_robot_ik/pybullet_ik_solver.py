@@ -6,7 +6,7 @@ import time
 
 
 class InverseKinematics():
-    def __init__(self, urdf, joint_names, joints_min=None, joints_max=None):
+    def __init__(self, urdf, joint_names, ik_link_ind=None, joints_min=None, joints_max=None):
         #IK position is assumed relative to last joint name
 
         p.connect(p.DIRECT)
@@ -14,17 +14,26 @@ class InverseKinematics():
         self._robot_id = p.loadURDF(urdf)
         self.num_urdf_joints = p.getNumJoints(self._robot_id)
         self.joint_names = joint_names
-        self.joint_map = [0] * len(joint_names)
+        self.joint_map = [0] * len(joint_names)                  #Map index (representing joint name) to link index
+        self.positional_map = dict()                             #Maps link index to positional index (index outputted by IK)
         self.num_joints = len(joint_names)
 
         #Figure out which joints in the URDF correspond to the joint names
         for i in range(self.num_urdf_joints):
             info = p.getJointInfo(self._robot_id, i)
+            if info[3] > -1:
+                self.positional_map[i] = info[3]
             for j, name in enumerate(joint_names):
                 if info[1].decode('UTF-8') == name:
                     self.joint_map[j] = i
-        self.ik_link_id = self.joint_map[-1]
-        
+        for key in self.positional_map.keys():
+            self.positional_map[key] -= 7
+
+        #Set link with which ik is computed
+        if ik_link_ind is None:
+            self.ik_link_id = self.joint_map[-1]
+        else:
+            self.ik_link_ind = ik_link_ind
 
         #Create min and max joint limits
         self.joint_limits_min = [-3.8] * self.num_urdf_joints
@@ -70,12 +79,15 @@ class InverseKinematics():
 
         best_joints, best_pos, best_quat, best_dist = None, None, None, float('inf')
         self._reset_pybullet(joint_angles) 
-        
         while (not closeEnough and iter_count < maxIter):
-            jointPoses = list(p.calculateInverseKinematics(self._robot_id, self.ik_link_id, targetPos, targetQuat, self.joint_limits_min, self.joint_limits_max))
-            for i in range(self.num_joints):
-                jointPoses[i] = max(min(jointPoses[i], self.joint_limits_max[i]), self.joint_limits_min[i])
-                p.resetJointState(self._robot_id, i, jointPoses[i])
+            joint_positions = list(p.calculateInverseKinematics(self._robot_id, self.ik_link_id, 
+                targetPos, targetQuat, self.joint_limits_min, self.joint_limits_max))
+            #print(len(joint_positions), joint_positions)
+            for joint_ind in self.joint_map:
+                positional_ind = self.positional_map[joint_ind]
+                joint_positions[positional_ind] = max(min(joint_positions[positional_ind], 
+                    self.joint_limits_max[positional_ind]), self.joint_limits_min[positional_ind])
+                p.resetJointState(self._robot_id, joint_ind, joint_positions[positional_ind])
 
             ls = p.getLinkState(self._robot_id, self.ik_link_id, computeForwardKinematics=1)
             newPos, newQuat = ls[4], ls[5]
@@ -84,15 +96,13 @@ class InverseKinematics():
             iter_count += 1
 
             if dist2 < best_dist:
-                best_joints, best_pos, best_quat, best_dist = jointPoses, newPos, newQuat, dist2
+                best_joints, best_pos, best_quat, best_dist = joint_positions, newPos, newQuat, dist2
 
         #Filter for useful joints
-        self.ik_offset = 5
         best_useful_joints = [0] * self.num_joints
-        for i in range(self.num_joints):
-            best_useful_joints[i] = best_joints[self.ik_offset + i]
+        for i, joint_ind in enumerate(self.joint_map):
+            best_useful_joints[i] = best_joints[self.positional_map[joint_ind]]
         return best_useful_joints, best_pos, best_quat
-
 
 
 

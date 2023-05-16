@@ -17,5 +17,10 @@ ROBOT_PARAMS = dict({
     'fetch': dict({
         'num_joints': 7,
         'reset_joints': np.array([0, -1.0, 0, 1.5, 0,  1.2, 0])
+    }),
+    'sawyer': dict({
+        'num_joints': 7,
+        'reset_joints': np.array([ 0.63825391,  0.36787891, -1.14962207,  1.8535752 ,  1.99177148, 1.28636816,  0.13015234])
     })
+
 })
