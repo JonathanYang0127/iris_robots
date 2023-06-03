@@ -1,6 +1,7 @@
 from rlkit.envs.wrappers.normalized_box_env import NormalizedBoxEnv
 from iris_robots.transformations import add_angles, angle_diff, pose_diff
 from iris_robots.robot_env import RobotEnv
+from PIL import Image
 
 import argparse
 import os
@@ -11,11 +12,16 @@ from PIL import Image
 from datetime import datetime
 import torch
 
+import time
 import rlkit.torch.pytorch_util as ptu
 
 
 #ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_nodesired_control3/wx250_black_marker_grasp_blue_nodesired_control3/combined_trajectories.npy'
-ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_nodesired_control3/wx250_black_marker_grasp_gray_nodesired_control3_ee2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_nodesired_control3/wx250_black_marker_grasp_gray_nodesired_control3_ee2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_shelf_close_camera2/wx250_shelf_close_grasp_camera2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_shelf_close_camera2/wx250_shelf_close_grasp_reverse_camera2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_shelf_close_bottom/combined_trajectories.npy'
+ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_pickplace/combined_trajectories.npy'
 
 with open(ROBOT_PATH, 'rb') as f:
     traj = np.load(f, allow_pickle=True)
@@ -97,9 +103,14 @@ class DeltaPoseToCommand:
 
 relabeller = DeltaPoseToCommand(obs, 'wx250s', normalize=False, model_type='nonlinear')
 
-index = 20
-for j in range(len(traj[index]['actions'])):
+index = 1
+images = []
+for j in range(len(traj[index]['actions']) - 1):
     obs = env.get_observation()
+    image = obs['images'][0]['array']
+    images.append(Image.fromarray(image))
+    #adp = pose_diff(traj[index]['observations'][j + 1]['current_pose'], obs['current_pose'])
+    
     adp = pose_diff(traj[index]['observations'][j + 1]['current_pose'], traj[index]['observations'][j]['current_pose'])
     cdp = pose_diff(traj[index]['observations'][j + 1]['desired_pose'], traj[index]['observations'][j]['current_pose'])
     #action = traj[index]['actions'][j]
@@ -114,4 +125,11 @@ for j in range(len(traj[index]['actions'])):
     #env.step(action)
     cdp[6] = env._robot._gripper.normalize(cdp[6])
     env.step_direct(cdp)
+    time.sleep(0.003)
 
+import time
+print("ASD")
+images[0].save('{}/eval_{}.gif'.format('eval_videos', int(time.time())),
+                            format='gif', append_images=images[1:],
+                            save_all=True, duration=100, loop=0)
+                                                                  
