@@ -14,12 +14,12 @@ policy = None
 env = RobotEnv(robot_model='sawyer', control_hz=20, use_local_cameras=True, camera_types='cv2', blocking=False)
 env.reset()
 import time; time.sleep(5)
-controller = VRPolicy(pos_action_gain=[20, 20, 20],
-                      rot_action_gain=20)
+controller = VRPolicy(pos_action_gain=[10, 10, 10], \
+                      rot_action_gain=5, rmat_reorder=[2, 1, -3, 4])
 
 # Make the data collector
 log_dir = os.path.join(os.path.dirname(iris_robots.__file__), 'training_data')
-log_dir = os.path.join(log_dir, "sawyer_test")
+log_dir = os.path.join(log_dir, "sawyer_shelf_reverse")
 data_collector = DataCollector(env=env, controller=controller, policy=policy, log_dir=log_dir)
 
 # Collect and save trajectories
