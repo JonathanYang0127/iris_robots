@@ -6,11 +6,15 @@ import time
 
 
 class InverseKinematics():
-    def __init__(self, urdf, joint_names, ik_link_ind=None, joints_min=None, joints_max=None):
+    def __init__(self, urdf, joint_names, ik_link_id=None, joints_min=None, joints_max=None):
         #IK position is assumed relative to last joint name
 
-        p.connect(p.DIRECT)
+        p.connect(p.GUI)
         
+        if 'wx250s' in urdf:
+            self.robot = 'wx250s'
+        elif 'sawyer' in urdf:
+            self.robot = 'sawyer'
         self._robot_id = p.loadURDF(urdf)
         self.num_urdf_joints = p.getNumJoints(self._robot_id)
         self.joint_names = joint_names
@@ -21,25 +25,26 @@ class InverseKinematics():
         #Figure out which joints in the URDF correspond to the joint names
         for i in range(self.num_urdf_joints):
             info = p.getJointInfo(self._robot_id, i)
+            print(info)
             if info[3] > -1:
                 self.positional_map[i] = info[3]
             for j, name in enumerate(joint_names):
                 if info[1].decode('UTF-8') == name:
                     self.joint_map[j] = i
+        
         for key in self.positional_map.keys():
             self.positional_map[key] -= 7
-
+        
         #Set link with which ik is computed
-        if ik_link_ind is None:
+        if ik_link_id is None:
             self.ik_link_id = self.joint_map[-1]
         else:
-            self.ik_link_ind = ik_link_ind
-
+            self.ik_link_id = ik_link_id
         #Create min and max joint limits
         self.joint_limits_min = [-3.8] * self.num_urdf_joints
         self.joint_limits_max = [3.8] * self.num_urdf_joints
-        self.joint_limits_min[2] = 0.37
-        self.joint_limits_max[2] = 0.37
+        #self.joint_limits_min[2] = 0.37
+        #self.joint_limits_max[2] = 0.37
         if joints_min is not None:
             for i in range(len(joints_min)):
                 self.joint_limits_min[self.joint_map[i]] = joints_max[i]
@@ -69,7 +74,48 @@ class InverseKinematics():
         return np.array(list(position), dtype='float32'), np.array(list(quat), dtype='float32')
 
 
-    def calculate_ik(self, targetPos, targetQuat, joint_angles, threshold=1e-5, maxIter=1000):
+    def calculate_ik2(self, targetPos, targetQuat, joint_angles, threshold=1e-5, maxIter=1000):
+        '''
+        Compute ik solution given pose
+        '''
+        closeEnough = False
+        iter_count = 0
+        dist2 = None
+
+        best_joints, best_pos, best_quat, best_dist = None, None, None, float('inf')
+        self._reset_pybullet(joint_angles)
+        #targetPos, targetQuat = self.get_cartesian_pose(joint_angles)
+        #print("Joint Angles: ",joint_angles)
+        while (not closeEnough and iter_count < maxIter):
+            joint_positions = list(p.calculateInverseKinematics(self._robot_id, 7,
+                targetPos, targetQuat, self.joint_limits_min, self.joint_limits_max))
+            #print(len(joint_positions), joint_positions)
+            for i in range(6):
+                joint_positions[i] = max(min(joint_positions[i],
+                    self.joint_limits_max[i]), self.joint_limits_min[i])
+                p.resetJointState(self._robot_id, i, joint_positions[i])
+
+            ls = p.getLinkState(self._robot_id, self.ik_link_id, computeForwardKinematics=1)
+            newPos, newQuat = ls[4], ls[5]
+            dist2 = sum([(targetPos[i] - newPos[i]) ** 2 for i in range(3)])
+            closeEnough = dist2 < threshold
+            iter_count += 1
+
+            if dist2 < best_dist:
+                best_joints, best_pos, best_quat, best_dist = joint_positions, newPos, newQuat, dist2
+
+        print(best_pos, best_quat)
+        print(best_joints)
+        #Filter for useful joints
+        best_useful_joints = [0] * self.num_joints
+        for i, joint_ind in enumerate(self.joint_map):
+            best_useful_joints[i] = best_joints[self.positional_map[joint_ind]]
+        print(best_useful_joints)
+        return best_joints, best_pos, best_quat
+
+
+
+    def calculate_ik(self, targetPos, targetQuat, joint_angles, threshold=1e-5, maxIter=1):
         '''
         Compute ik solution given pose
         '''
@@ -79,14 +125,18 @@ class InverseKinematics():
 
         best_joints, best_pos, best_quat, best_dist = None, None, None, float('inf')
         self._reset_pybullet(joint_angles) 
+        #targetPos, targetQuat = self.get_cartesian_pose(joint_angles)
+        #print("Joint Angles: ",joint_angles)
         while (not closeEnough and iter_count < maxIter):
             joint_positions = list(p.calculateInverseKinematics(self._robot_id, self.ik_link_id, 
                 targetPos, targetQuat, self.joint_limits_min, self.joint_limits_max))
-            #print(len(joint_positions), joint_positions)
+            print(len(joint_positions), joint_positions)
             for joint_ind in self.joint_map:
                 positional_ind = self.positional_map[joint_ind]
-                joint_positions[positional_ind] = max(min(joint_positions[positional_ind], 
-                    self.joint_limits_max[positional_ind]), self.joint_limits_min[positional_ind])
+                print(joint_positions[positional_ind])
+                #joint_positions[positional_ind] = max(min(joint_positions[positional_ind], 
+                #    self.joint_limits_max[positional_ind]), self.joint_limits_min[positional_ind])
+                print(joint_positions[positional_ind])
                 p.resetJointState(self._robot_id, joint_ind, joint_positions[positional_ind])
 
             ls = p.getLinkState(self._robot_id, self.ik_link_id, computeForwardKinematics=1)
@@ -98,10 +148,13 @@ class InverseKinematics():
             if dist2 < best_dist:
                 best_joints, best_pos, best_quat, best_dist = joint_positions, newPos, newQuat, dist2
 
+        print(best_pos, best_quat)
+        print(best_joints)
         #Filter for useful joints
         best_useful_joints = [0] * self.num_joints
         for i, joint_ind in enumerate(self.joint_map):
             best_useful_joints[i] = best_joints[self.positional_map[joint_ind]]
+        print(best_useful_joints)
         return best_useful_joints, best_pos, best_quat
 
 

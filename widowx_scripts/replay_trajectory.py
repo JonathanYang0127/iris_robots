@@ -22,6 +22,7 @@ import rlkit.torch.pytorch_util as ptu
 #ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_shelf_close_camera2/wx250_shelf_close_grasp_reverse_camera2/combined_trajectories.npy'
 #ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_shelf_close_bottom/combined_trajectories.npy'
 ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_pickplace/combined_trajectories.npy'
+ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_shelf_close_bottom/combined_trajectories.npy'
 
 with open(ROBOT_PATH, 'rb') as f:
     traj = np.load(f, allow_pickle=True)
@@ -103,7 +104,7 @@ class DeltaPoseToCommand:
 
 relabeller = DeltaPoseToCommand(obs, 'wx250s', normalize=False, model_type='nonlinear')
 
-index = 1
+index = 0
 images = []
 for j in range(len(traj[index]['actions']) - 1):
     obs = env.get_observation()

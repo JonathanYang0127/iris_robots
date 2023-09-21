@@ -11,8 +11,8 @@ import os
 policy = None
 
 # Make the robot env
-#env = RobotEnv('127.0.0.21', use_local_cameras=True) 
-env = RobotEnv(robot_model='franka', control_hz=20, use_local_cameras=True, camera_types='cv2', blocking=False, reverse_image=True)
+env = RobotEnv('127.0.0.21', use_local_cameras=True) 
+#env = RobotEnv(robot_model='franka', control_hz=20, use_local_cameras=True, camera_types='cv2', blocking=False, reverse_image=True)
 
 controller = VRPolicy(pos_action_gain=[5, 5, 5],
                       rot_action_gain=5, rmat_reorder=[2, 1, -3, 4])

@@ -112,15 +112,17 @@ output1 = np.array(output1).reshape(len(obs1), -1)[:500]
 output2 = np.array(output2).reshape(len(obs2), -1)[:500]
 output = np.concatenate((output1, output2))
 
-'''
+
 from sklearn.manifold import TSNE
 tsne = TSNE(n_components=2, random_state=0)
 outputs_2d = tsne.fit_transform(output)
-'''
 
+
+'''
 from sklearn.decomposition import PCA
 pca = PCA(n_components=2)
 outputs_2d = pca.fit_transform(output)
+'''
 
 from matplotlib import pyplot as plt
 plt.figure(figsize=(6, 5))

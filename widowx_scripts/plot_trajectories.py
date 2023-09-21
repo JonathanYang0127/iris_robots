@@ -9,8 +9,15 @@ from iris_robots.transformations import add_angles, angle_diff
 #ROBOT_PATH = '/iris/u/jyang27/training_data/purple_marker_grasp_new/combined_trajectories.npy'
 #ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/widowx_scripts/proprioceptive_data_collection/proprioceptive_data_tc_nodesired/combined_trajectories.npy'
 #ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_purple_marker_grasp_blue_nodesired/combined_trajectories.npy'
-ROBOT_PATH = '/iris/u/jyang27/training_data/franka_black_marker_grasp_blue_nodesired/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/franka_black_marker_grasp_blue_nodesired/combined_trajectories.npy'
 #ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_black_marker_grasp_blue_nodesired_control2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/franka_shelf/franka_shelf_target_camera2/combined_trajectories.npy'
+#ROBOT_PATH = dd
+ROBOT_PATH = '/iris/u/jyang27/training_data/wx250_shelf_close_camera2/wx250_shelf_close_grasp_camera2/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/sawyer_shelf/sawyer_shelf_forward/combined_trajectories.npy' 
+#ROBOT_PATH = '/iris/u/jyang27/training_data/sawyer_black_marker_pickplace/sawyer_black_marker_pickplace_gray/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/training_data/franka_pink_place_gray_plate/combined_trajectories.npy'
+#ROBOT_PATH = '/iris/u/jyang27/dev/iris_robots/iris_robots/training_data/wx250_pickplace/combined_trajectories.npy'
 
 with open(ROBOT_PATH, 'rb') as f:
     trajectories = np.load(f, allow_pickle=True)
@@ -60,8 +67,8 @@ def limit_velocity(action):
 
     return np.concatenate((lin_vel, rot_vel))
 
-path = trajectories[20]
-for t in range(0, len(path['observations']) // 2):
+path = trajectories[0]
+for t in range(0, len(path['observations']) - 2):
     action = limit_velocity(path['actions'][t]).tolist()
     current_pose = path['observations'][t]['current_pose'].tolist()
     desired_pose = path['observations'][t]['desired_pose']
@@ -113,13 +120,34 @@ U2 = commanded_delta_pose[:, 0]
 V2 = commanded_delta_pose[:, 1]
 W2 = commanded_delta_pose[:, 2]
 
+error=np.linalg.norm(achieved_delta_pose[:,:3]- commanded_delta_pose[:,:3], axis=-1)
+#error = np.linalg.norm(achieved_delta_pose[:,:3]/np.linalg.norm(achieved_delta_pose[:,:3]) - commanded_delta_pose[:,:3]/np.linalg.norm(commanded_delta_pose[:,:3]), axis=-1)
+
+with open('error1.pkl', 'rb') as f:
+    #pickle.dump(error, f)
+    error1 = pickle.load(f)
+
+#print(len(error))
+#print(len(error1))
+error = error[:min(len(error), len(error1))]
+error1=error1[:min(len(error), len(error1))]
+import seaborn as sns
+plt.xlabel('Timestep')
+plt.ylabel('Error')
+plt.title('Commanded and Achieved Delta Pose Error')
+sns.lineplot(x=np.arange(len(error)), y=error, color='red', label='Pick/Place')
+sns.lineplot(x=np.arange(len(error)), y=error1, color='darkblue', label='Shelf Manipulation')
+plt.legend()
+plt.savefig('adpcdperror.png')
+
+print(np.mean(error))
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 ax.quiver(X, Y, Z, U, V, W)
 #ax.scatter(X, Y, Z)
-ax.set_xlim([0, 0.3])
-ax.set_ylim([0, 0.3])
+#ax.set_xlim([0.0, 0.3])
+#ax.set_ylim([0.0, 0.15])
 ax.set_zlim([0, 0.2])
 plt.savefig('plot2d.png')
 ax.quiver(X[::10], Y[::10], Z[::10], U2[::10], V2[::10], W2[::10], color='red')
@@ -138,7 +166,7 @@ model = nn.Sequential(
         nn.Linear(256, 3)
         ).cuda()
 
-
+'''
 #model = InverseDynamicsModel(x_train.shape[1], 7).cuda()
 #model.load_state_dict(torch.load('new2/checkpoints_cdp_normalized_bigger/output_100000.pt'))
 model = torch.load('/iris/u/jyang27/dev/iris_robots/widowx_scripts/nonlinear_adp_cdp_xyz_model_unnormalized.pt')
@@ -153,6 +181,6 @@ W3 = model_cdp[:, 2]
 ax.quiver(X[::10], Y[::10], Z[::10], U3[::10], V3[::10], W3[::10], color='green')
 #plt.show()
 plt.savefig('plot2d_cdp_model.png')
- 
+'''
 
 

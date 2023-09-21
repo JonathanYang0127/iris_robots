@@ -33,7 +33,8 @@ variant = dict(
         action_relabelling=None,
         downsample_image=True,
         align_actions=True,
-        mixup=True
+        mixup=True,
+        continuous_to_blocking=False,
     ),
     buffers = ['/iris/u/jyang27/training_data/wx250_nodesired_control3/wx250_black_marker_grasp_tan_nodesired_control3/combined_trajectories.npy',
         '/iris/u/jyang27/training_data/wx250_nodesired_control3/wx250_black_marker_grasp_gray_red_cup_nodesired_control3/combined_trajectories.npy',

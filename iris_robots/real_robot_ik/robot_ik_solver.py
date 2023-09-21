@@ -25,7 +25,7 @@ class RobotIKSolver:
             self._arm = WidowX250Arm()
         elif arm_name == 'fetch':
             self._arm = FetchArm()
-                
+
         self._physics = mjcf.Physics.from_mjcf_model(self._arm.mjcf_model)
         self._effector = arm_effector.ArmEffector(arm=self._arm,
             action_range_override=None,
@@ -35,7 +35,7 @@ class RobotIKSolver:
             self._arm.wrist_site, self._arm.joints)
 
         scaler = 0.1
-
+        print("123")
         self._effector_control = cartesian_6d_velocity_effector.ControlParams(
             control_timestep_seconds=1 / control_hz,
             max_lin_vel=1.0,
@@ -49,10 +49,12 @@ class RobotIKSolver:
             max_cartesian_velocity_control_iterations=300,
             max_nullspace_control_iterations=300)
 
+        print("ASD")
         self._cart_effector_6d = cartesian_6d_velocity_effector.Cartesian6dVelocityEffector(
                         self._arm.name, self._effector, self._effector_model, self._effector_control)
-
+        print("1234")
         self._cart_effector_6d.after_compile(self._arm.mjcf_model, self._physics)
+        print("12345")
 
     def compute(self, desired_ee_pos, desired_ee_quat, joint_positions=None, joint_velocities=None, ee_pos=None, ee_quat=None):
 

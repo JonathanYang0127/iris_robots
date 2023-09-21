@@ -23,7 +23,7 @@ robot_hostname="thevision-sawyer.local"
 
 # Set *Either* your computers ip address or hostname. Please note if using
 # your_hostname that this must be resolvable to the Robot.
-your_ip="192.168.1.110"
+your_ip="172.24.68.69"
 #your_hostname="my_computer.local"
 
 # Specify ROS distribution (e.g. kinetic, indigo, hydro, etc.)

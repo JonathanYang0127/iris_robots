@@ -8,6 +8,9 @@ import numpy as np
 import time
 import gym
 from params import ROBOT_PARAMS
+import yaml
+import os
+import pathlib
 
 from iris_robots.transformations import add_angles, angle_diff
 from iris_robots.camera_utils.multi_camera_wrapper import MultiCameraWrapper
@@ -16,7 +19,8 @@ from iris_robots.server.robot_interface import RobotInterface
 class RobotEnv(gym.Env):
 
     def __init__(self, ip_address=None, robot_model='franka', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
-            camera_types=['cv2'], blocking=True, reverse_image=False):
+            camera_types=['cv2'], blocking=True, reverse_image=False, 
+            show_test_images=True, robot_config_file='wx250s_polybot_config.yaml'):
 
         # Initialize Gym Environment
         super().__init__()
@@ -30,23 +34,27 @@ class RobotEnv(gym.Env):
 
         # Robot Configuration
         self.robot_model = robot_model
+        robot_config_file = os.path.join(pathlib.Path(__file__).parent, 
+            'widowx/config', robot_config_file)
+        with open(robot_config_file, 'r') as f:
+            robot_config = yaml.safe_load(f)
+
+        assert robot_config['robot_model'] == robot_model, f'{robot_model} not in robot config!'
+        self.max_lin_vel = robot_config['max_lin_vel']
+        self.max_rot_vel = robot_config['max_rot_vel']
+
+    
         if ip_address is None:
             if robot_model == 'franka':
                 from iris_robots.franka.robot import FrankaRobot
                 self._robot = FrankaRobot(control_hz=self.hz, blocking=blocking)
                 self._robot = FrankaRobot(control_hz=self.hz)
-                self.max_lin_vel = 1.0
-                self.max_rot_vel = 2.0
             elif robot_model == 'wx200':
                 from iris_robots.widowx.robot import WidowX200Robot
                 self._robot = WidowX200Robot(control_hz=self.hz)
-                self.max_lin_vel = 1.5
-                self.max_rot_vel = 6.0
             elif robot_model == 'wx250s':
                 from iris_robots.widowx.robot import WidowX250SRobot
                 self._robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
-                self.max_lin_vel = 1.5
-                self.max_rot_vel = 6.0
             else:
                 raise NotImplementedError
 
@@ -69,7 +77,16 @@ class RobotEnv(gym.Env):
         self.reset()
 
         if self.num_cameras == 0:
-            print("Warning: No cameras found!") 
+            print("Warning: No cameras found!")
+        else:
+            if show_test_images:
+                from matplotlib import pyplot as plt
+                obs = self.get_observation()
+                for image in obs['images']:
+                    plt.figure()
+                    plt.imshow(image['array'])
+                    plt.show()
+            print(f"{self.num_cameras} cameras found!") 
 
     def step(self, action):
         start_time = time.time()
@@ -77,7 +94,6 @@ class RobotEnv(gym.Env):
         # Process Action
         assert len(action) == (self.DoF + 1)
         assert (action.max() <= 1) and (action.min() >= -1)
-
         pos_action, angle_action, gripper = self._format_action(action)
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
         desired_pos = self._curr_pos + lin_vel

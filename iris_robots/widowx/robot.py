@@ -5,6 +5,7 @@ Adapted from https://github.com/rail-berkeley/robonetv2/blob/621c813cbfbca1480c7
 
 # ROBOT SPECIFIC IMPORTS
 from iris_robots.real_robot_ik.robot_ik_solver import RobotIKSolver
+from iris_robots.real_robot_ik.pybullet_ik_solver import InverseKinematics
 from iris_robots.widowx.custom_gripper_controller import GripperController
 from interbotix_xs_modules.arm import InterbotixArmXSInterface, InterbotixArmXSInterface, InterbotixRobotXSCore, InterbotixGripperXSInterface
 from sensor_msgs.msg import JointState
@@ -20,6 +21,7 @@ from pyquaternion import Quaternion
 from iris_robots.transformations import euler_to_quat, quat_to_euler
 from terminal_utils import run_terminal_command
 from threading import Lock
+from pathlib import Path
 import numpy as np
 import torch
 import rospy
@@ -93,7 +95,7 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
 
 class WidowXRobot:
-    def __init__(self, control_hz=20, robot_model='wx250s', blocking=True):
+    def __init__(self, control_hz=20, robot_model='wx250s', blocking=True, ik_mode='default'):
         self.robot_model = robot_model
         self.dxl = InterbotixRobotXSCore(robot_model, None, True)
         self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 1.0, 0.01)
@@ -110,6 +112,7 @@ class WidowXRobot:
 
         #TODO: Change to allow for different "neutral" base rotations
         self.joint_names = self.arm.group_info.joint_names
+        print(self.joint_names)
         DEFAULT_ROTATION = np.array([[0, 0, 1.0],
                                      [0, 1.0, 0],
                                      [-1.0, 0, 0]])
@@ -118,7 +121,14 @@ class WidowXRobot:
         self._gripper = GripperController(robot_model)
         self.blocking = blocking
 
-        #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
+        self.ik_mode = ik_mode
+        if self.ik_mode == 'pybullet':
+            current_file = Path(__file__).parent.absolute()
+            self.urdf = "../real_robot_ik/wx250/wx250s_description/urdf/wx250s.urdf"
+            self._ik = InverseKinematics(os.path.join(current_file, self.urdf), self.joint_names,
+                    ik_link_id=7,
+                    joints_min = [-3.14, -1.88, -2.15, -3.14, -1.74, -3.14],
+                    joints_max=[3.14, 1.99, 1.6, 3.14, 2.14, 3.14])
 
     def _joint_callback(self, msg):
         with self._joint_lock:
@@ -133,6 +143,18 @@ class WidowXRobot:
         self._robot_process.terminate()
 
     def update_pose(self, pos, angle, duration=1.5):
+        if self.ik_mode == "default":
+            return self.update_pose_default(pos, angle, duration)
+        else:
+            return self.update_pose_pybullet(pos, angle, duration=duration)
+
+    def update_pose_pybullet(self, pos, angle, new_quat=None, duration=1.5):
+        if new_quat is None:
+            new_quat = euler_to_quat(angle) 
+        best_joints, best_pos, best_quat = self._ik.calculate_ik(pos, new_quat, self.get_joint_positions())
+        #self.update_joints(best_joints)
+
+    def update_pose_default(self, pos, angle, duration=1.5):
         '''Expect [x,y,z], [yaw, pitch, roll]'''
 
         new_pose = np.eye(4)
@@ -147,6 +169,8 @@ class WidowXRobot:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
                                                                 moving_time=duration, accel_time=duration * 0.45)
 
+        print(pos, angle)
+        print(solution)
         return pos, angle
 
     def update_joints(self, joints, duration=1.5):
@@ -195,6 +219,16 @@ class WidowXRobot:
         return np.array([state_2, vel])
 
     def get_ee_pose(self):
+        if self.ik_mode == "default":
+            return self.get_ee_pose_default()
+        else:
+            return self.get_ee_pose_pybullet()
+
+    def get_ee_pose_pybullet(self):
+        return self._ik.get_cartesian_pose(self.get_joint_positions())
+
+
+    def get_ee_pose_default(self):
         joint_positions = list(self.dxl.joint_states.position[self.arm.waist_index:(self._qn + self.arm.waist_index)])
         pose = mr.FKinSpace(self.arm.robot_des.M, self.arm.robot_des.Slist, joint_positions)
 
